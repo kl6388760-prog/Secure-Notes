@@ -1,9 +1,9 @@
 import customtkinter as ctk
-from tkinter import messagebox, Toplevel
+from tkinter import messagebox
 import datetime
 from storage import init_storage, load_notes, save_notes
 
-ctk.set_appearance_mode("dark")  # тёмная тема
+ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 class LoginWindow(ctk.CTkToplevel):
@@ -34,28 +34,29 @@ class LoginWindow(ctk.CTkToplevel):
         if not pwd:
             self.info_label.configure(text="Пароль не может быть пустым")
             return
-        # Проверяем, существует ли файл и можно ли расшифровать
-        try:
-            notes = load_notes(pwd)
-            if notes is None:
-                self.info_label.configure(text="Неверный пароль или повреждённые данные")
-                return
-            # Если файл пустой, создаём новый
-            if notes == {}:
-                save_notes({}, pwd)
-            self.password = pwd
-            self.destroy()
-            self.master.deiconify()
-            self.master.after(100, lambda: self.master.load_notes())
-        except Exception as e:
-            self.info_label.configure(text=f"Ошибка: {str(e)}")
+
+        notes = load_notes(pwd)
+
+        if notes == "WRONG_PASSWORD":
+            self.info_label.configure(text="Неверный пароль! Попробуйте ещё раз.")
+            return
+
+        if notes is None:
+            # Первый запуск или повреждённый файл — создаём новый с этим паролем
+            save_notes({}, pwd)
+
+        # В остальных случаях (notes — словарь, даже пустой) — вход успешен
+        self.password = pwd
+        self.destroy()
+        self.master.deiconify()
+        self.master.after(100, lambda: self.master.load_notes())
 
 class NotesApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Secure Notes")
         self.geometry("900x600")
-        self.withdraw()  # скрываем главное окно до входа
+        self.withdraw()
 
         init_storage()
         self.current_notes = {}
@@ -102,10 +103,6 @@ class NotesApp(ctk.CTk):
         self.save_btn = ctk.CTkButton(self.right_frame, text="Сохранить заметку", command=self.save_current_note)
         self.save_btn.grid(row=2, column=0, padx=15, pady=10, sticky="e")
 
-        # Связываем изменения с автосохранением (опционально)
-        # self.title_entry.bind("<KeyRelease>", lambda e: self.save_current_note())
-        # self.text_area.bind("<KeyRelease>", lambda e: self.save_current_note())
-
         # Запускаем окно входа
         self.login_window = LoginWindow(self)
         self.login_window.grab_set()
@@ -113,7 +110,9 @@ class NotesApp(ctk.CTk):
     def load_notes(self):
         self.password = self.login_window.password
         self.current_notes = load_notes(self.password)
-        if self.current_notes is None:
+        # После успешного входа load_notes всегда возвращает словарь (может быть пустым)
+        # но на всякий случай проверим
+        if self.current_notes is None or self.current_notes == "WRONG_PASSWORD":
             self.current_notes = {}
         self.refresh_list()
 

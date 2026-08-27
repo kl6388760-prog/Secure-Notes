@@ -9,18 +9,28 @@ def init_storage():
         with open(DATA_FILE, 'w') as f:
             json.dump({}, f)  # пустой словарь
 
-def load_notes(password: str) -> dict:
+def load_notes(password: str):
+    """
+    Возвращает:
+    - словарь заметок (может быть пустым), если расшифровка успешна
+    - None, если файл не существует или повреждён (первый запуск)
+    - "WRONG_PASSWORD", если пароль неверный (расшифровка не удалась)
+    """
     if not DATA_FILE.exists():
-        return {}
+        return None
+
     with open(DATA_FILE, 'r') as f:
-        enc_data = json.load(f)  # ожидаем {"notes": "зашифрованная строка"}
+        enc_data = json.load(f)
+
     if "notes" not in enc_data:
-        return {}
+        return None  # повреждённый файл
+
     try:
         json_str = decrypt(enc_data["notes"], password)
-        return json.loads(json_str)  # словарь {id: {title, content, date}}
+        return json.loads(json_str)
     except:
-        return {}  # неверный пароль или повреждённые данные
+        # Не удалось расшифровать — скорее всего, неверный пароль
+        return "WRONG_PASSWORD"
 
 def save_notes(notes: dict, password: str):
     json_str = json.dumps(notes, ensure_ascii=False, indent=2)

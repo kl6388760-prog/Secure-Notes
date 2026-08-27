@@ -14,7 +14,7 @@
 ## Установка и запуск
 
 ```bash
-git clone https://github.com/kl6388760-prog/Secure-Notes.git
+git clone https://github.com/ваш-ник/secure-notes.git
 cd secure-notes
 pip install -r requirements.txt
 python main.py
